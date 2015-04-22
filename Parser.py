@@ -8,7 +8,7 @@ from HTMLParser import HTMLParseError # python 2
 from collections import Iterable
 
 class Parser(pykka.ThreadingActor):
-    """ Superclass, parse text """
+    """ Superclass, tools for text cleaning and stemming """
     def __init__(self):
         super(Parser, self).__init__()
         self.stemFR = nl.stem.snowball.FrenchStemmer(ignore_stopwords=False)
@@ -31,22 +31,20 @@ class Parser(pykka.ThreadingActor):
         return(result)
 
 class Tw_parser(Parser):
-    """ on tweets, parse it, return parsed version
-    Send multiple tweets at a time ?
-    Or use DB ?
-     """
+    """ parse list of tweets and create
+    "   the document representing the user
+    """
     def __init__(self):
         super(Tw_parser, self).__init__()
 
     def on_receive(self, message):
         """ Assume message is a tweet """
-        # On tweet
-        # Parse it
-        # send to DB ?
-        # return
-        if "Tweet" in message:
-            tweet = message['tweet']
-            out_msg = text_parser(tweet['text'], tweet['lang'])
+        if "parse_tweets" in message:
+            uid = message["parse_tweets"]['uid']
+            tweets = message["parse_tweets"]['tweets']
+            document = []
+            [document.extend(self.text_parser(tw['text'], tw['lang'])) for tw in tweets]
+            out_msg = {"uid":id, "document":" ".join(document)}
         else:
             out_msg = 0xBAADF00D
         return out_msg
@@ -55,26 +53,25 @@ class Tw_parser(Parser):
         result = []
         ## Clean text 
         text = re.sub(r"http\S+", "", text)
-        # text = re.sub(r"(RT)|[#@]", "", text) # remove #, @ and RT
         text = self.remove_punct(text)
         ## Tokenize text    
         tokens = nl.word_tokenize(text)
+        ## Stem text
         tokens = self.stemmer(tokens, lang)
         if isinstance(tokens, Iterable):
             result.extend(tokens)
         return(result)
 
 class Url_parser(Parser):
-    """Fetch friends and tweets for a given ego """
+    """ Fetch metadata of Url, parse it and send it back """
     def __init__(self):
         super(Url_parser, self).__init__()
 
     def on_receive(self, message):
-        if 'url' in message:
+        if 'parse_url' in message:
             try :
-                meta = self.get_meta(message['url'])
+                meta = self.get_meta(message['parse_url']['url'])
                 out_msg = self.meta_parser(meta)
-                # send to DB ?
             except:
                 out_msg = 0xDEADFEED # timeout-like
         else :

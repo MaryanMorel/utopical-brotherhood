@@ -16,22 +16,11 @@ class Big_Brother(pykka.ThreadingActor):
             # Start other workers according to this info ?
             # Make the other workers send message when they're done ?
     		return "manager started" # check it !
-    	# elif "send_message_to" in message:
-    	# 	msg = message['send_message_to']
-    	# 	w = msg[0]
-    	# 	m = msg[1]
-    	# 	self.pool['greeters'][w].tell({'msg': m})
-    	# 	# return the response of the worker
-    	# elif "update_message" in message:
-    	# 	msg = message['update_message']
-    	# 	w = msg[0]
-    	# 	m = msg[1]
-    	# 	self.pool['greeters'][w].tell({'update_message':m})
-    	# 	# return the response of the worker
     	elif "stop_manager" in message:
     		msg = message['update_message']
     		w = msg[0]
             ## More intelligent way to kill workers ?
             ## Be elastic !
     		self.pool['managers'][w].stop()
+            ## Be sure that managers kill their workers !
     		return "Manager killed" # check it !
