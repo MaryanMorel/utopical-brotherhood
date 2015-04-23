@@ -37,16 +37,11 @@ class Tw_parser(Parser):
     def __init__(self):
         super(Tw_parser, self).__init__()
 
-    def on_receive(self, message):
-        """ Assume message is a tweet """
-        if "parse_tweets" in message:
-            uid = message["parse_tweets"]['uid']
-            tweets = message["parse_tweets"]['tweets']
-            document = []
-            [document.extend(self.text_parser(tw['text'], tw['lang'])) for tw in tweets]
-            out_msg = {"uid":id, "document":" ".join(document)}
-        else:
-            out_msg = 0xBAADF00D
+    def parse_tweets(self, uid, texts, texts_lang):
+        """ Assume message is a tweet collection """
+        document = []
+        [document.extend(self.text_parser(txt, lang)) for txt, lang in zip(texts, texts_lang)]
+        out_msg = {"uid":uid, "document":" ".join(document)}
         return out_msg
 
     def text_parser(self, text, lang):
@@ -60,22 +55,20 @@ class Tw_parser(Parser):
         tokens = self.stemmer(tokens, lang)
         if isinstance(tokens, Iterable):
             result.extend(tokens)
-        return(result)
+        return result
 
 class Url_parser(Parser):
     """ Fetch metadata of Url, parse it and send it back """
     def __init__(self):
         super(Url_parser, self).__init__()
 
-    def on_receive(self, message):
-        if 'parse_url' in message:
-            try :
-                meta = self.get_meta(message['parse_url']['url'])
-                out_msg = self.meta_parser(meta)
-            except:
-                out_msg = 0xDEADFEED # timeout-like
-        else :
-            out_msg = 0xBAADF00D # unhandled message
+    def parse_url(self, url):
+        try :
+            meta = self.get_meta(message['parse_url']['url'])
+            document = self.meta_parser(meta)
+            out_msg = " ".join(document)
+        except:
+            out_msg = ""
         return out_msg
 
     def meta_parser(self, meta):
@@ -95,7 +88,7 @@ class Url_parser(Parser):
             description_tokens = self.stemmer(description, lang)
             if isinstance(description_tokens, Iterable):
                 result.extend(description_tokens)
-        return(result)
+        return result
 
     def get_meta(self, url):
         '''
@@ -149,4 +142,4 @@ class Url_parser(Parser):
         except HTMLParseError:
             data["canonical"] = url
             data["errstatus"] = "Error parsing page data"
-        return(data)
+        return data

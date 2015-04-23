@@ -3,6 +3,7 @@ import time
 import warnings
 from Fetcher import Fetcher
 from Parser import Tw_parser, Url_parser
+from Learner import Learner
 from time import sleep
 
 class Manager(pykka.ThreadingActor):
@@ -38,73 +39,82 @@ class Manager(pykka.ThreadingActor):
         self.remaining_friends = None
         self.data = None
 
-    def on_receive(self, message):
-        if "fetch_data" in message:
-            self.remaining_friends = None
-            self.pool['fetcher'] = Fetcher.start(api, self.ego.id)
-            answer = self.pool['fetcher'].ask( \
-                {"fetch_friends":{'ids':self.friends_ids}}, timeout=180)
-            if answer["status"] == 0:
+    def fetch_data(self):
+        self.remaining_friends = None
+        self.pool['fetcher'] = Fetcher.start(api, self.ego.id).proxy()
+        answer = self.pool['fetcher'].fetch_data(self.friends_ids)
+        answer.get()
+        if answer["status"] == 0:
+            # push data into DB
+            self.db['raw_data'].insert_many(answer['data'])
+            self.data = answer['data']
+            out_msg = 0 # All went well
+        elif answer["status"] == 0xDEADFEED: # Timeout
+            while answer["status"] == 0xDEADFEED:
                 # push data into DB
                 self.db['raw_data'].insert_many(answer['data'])
-                self.data = answer['data']
-                out_msg = 0 # All went well
-            elif answer["status"] == 0xDEADFEED: # Timeout
-                while answer["status"] == 0xDEADFEED:
-                    # push data into DB
-                    self.db['raw_data'].insert_many(answer['data'])
-                    self.data.extend(answer['data'])
-                    # fetch remaining data
-                    self.remaining_friends = answer["unprocessed_friends"]
-                    sleep(300) # Wait 5 min an try again
-                    answer = self.pool['fetcher'].ask( \
-                        {"fetch_friends":{'ids':self.remaining_friends}}, timeout=180)
-                out_msg = 0 # All went well
-            else:
-                out_msg = 0xDEADC0DE # Strange error, try to raise precise errors
-            self.pool['fetcher'].stop()
-            self.pool['fetcher'] = None
-
-        elif "parse_data" in message:
-            if self.data:
-                for i, friend_data in enumerate(data):
-                    self.pool['tw_parsers'] = Tw_parser.start()
-                    self.pool['tw_parsers'].ask(???????????????) ########################### IMPLEMENT
-
-                    # Start workers
-                    self.pool['tw_parsers'] = [Url_parser.start().proxy() for _ in range(pool_size)]
-
-                    # Distribute work by mapping urls to self.pool['tw_parsers'] (not blocking)
-                    parsed_urls = []
-                    for j, url in enumerate(friend_data['texts_urls']):
-                        parsed_urls.append(self.pool['tw_parsers'][j % len(self.pool['tw_parsers'])].resolve(url))
-
-                    # Gather results (blocking)
-                    ip_to_host = zip(i, pykka.get_all(parsed_urls))
-                    pprint.pprint(list(ip_to_host))
-
-                    ## Some elastic number of workers
-                    # Clean up ## At the end of the loop only ? Startup is costly
-                    # Just add a if to check if workers are alive
-                    self.pool['tw_parsers'].stop()
-                    [worker.stop() for worker in self.pool['tw_parsers']]
-
-            # Save it to DB
+                self.data.extend(answer['data'])
+                # fetch remaining data
+                self.remaining_friends = answer["unprocessed_friends"]
+                sleep(300) # Wait 5 min an try again
+                answer = self.pool['fetcher'].fetch_data(self.remaining_friends)
+                answer.get()
             out_msg = 0 # All went well
-
-        # Some updating of the data ?
-        # just add a if at fetch step ?
-        # elif "update_data" in message:
-        #     # update friends + tweets + documents
-        #     # save it to DB
-        #     out_msg = 0 # All went well
-
-        elif "learn" in message:
-            # Read data from DB
-            # run clustering then save it to DB
-            out_msg = 0 # All went well
-
-        else :
-            out_msg = 0xBAADF00D
-
+        else:
+            out_msg = 0xDEADC0DE # Strange error, try to raise precise errors
+        self.pool['fetcher'].stop()
+        self.pool['fetcher'] = None
         return out_msg
+
+    def parse_data(self):
+        if self.data:
+            parsed_data = []
+            for friend_data in self.data:
+                u_id = friend_data['u_id']
+                # Tweet parsing
+                self.pool['tw_parsers'] = Tw_parser.start()
+                # Non blocking:
+                parsed_tweets = self.pool['tw_parsers'].parse_tweets(friend_data['texts'], friend_data['texts_lang'])
+
+                # Url parsing
+                urls = friend_data['texts_urls']
+                pool_size = len(self.pool_size['url_parsers'])
+                if pool_size < len(urls):
+                    self.pool['url_parsers'].extend( \
+                     [Url_parser.start().proxy() for _ in range(len(urls)-pool_size)] \
+                     )
+
+                # Distribute work by mapping urls to self.pool['url_parsers'] (not blocking)
+                parsed_urls = [self.pool['url_parsers'][w].parse_url(url) for w,url in enumerate(urls)]
+
+                # Gather parsed_data (blocking)
+                documents = [parsed_tweets.get()]
+                documents.extend([doc for doc in pykka.get_all(parsed_urls) if len(doc > 0)])
+                parsed_data.extend({'ego_id':self.ego_id ,'u_id':u_id, \
+                                'u_document':" ".join(documents)})
+
+            self.pool['tw_parsers'].stop()
+            [worker.stop() for worker in self.pool['url_parsers']]
+            # Save it to DB
+            self.db['parsed_data'].insert_many(parsed_data)
+            self.parsed_data = parsed_data
+            out_msg = 0 # All went well
+        # elif # some request to fech raw data from mongo:
+        #    run same stuff ?
+        else:
+            try:
+                ## read data from mongoDB linked to this used
+                # + do the same treatment
+                # out_msg = 0
+            except
+                out_msg = 0xDEADFEED ## No data
+        return out_msg
+
+    def learn(self, k=20):
+        ## Usual : check if data in manager, else fetch it in MongoDB, etc.
+        ## Can add some parameters to pass to the classifier ?
+        self.pool['learner'] = Learner.start(k).proxy()
+        clustering = self.pool['learner'].learn(self.parsed_data)
+        ## Push into DB
+        # from datetime import datetime
+        # db['clusterings'].insert(clustering.get()) # "created_at":str(datetime.now())})
