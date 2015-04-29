@@ -1,7 +1,9 @@
+#! /usr/bin/python2
+# -*- coding: utf8 -*-
+
 from __future__ import division
 from math import ceil
-import pykka
-import time
+import pykka, tweepy, time
 from warnings import warn
 
 class Fetcher(pykka.ThreadingActor):
@@ -11,7 +13,7 @@ class Fetcher(pykka.ThreadingActor):
     def __init__(self, api, ego_id):
         super(Fetcher, self).__init__()
         self.api = api
-        self.ego_id
+        self.ego_id = ego_id
 
     def fetch_data(self, ids):
         """ Get timelines with GET statuses/user_timeline
@@ -32,7 +34,7 @@ class Fetcher(pykka.ThreadingActor):
             warn('0xDEADFEED')
             warn(exc)
             unprocessed_friends = set(ids).difference(set(processed))
-            out_msg = {'status':0xDEADFEED, 'data':data \
+            out_msg = {'status':0xDEADFEED, 'data':data, \
                        'unprocessed_friends':unprocessed_friends}
         return out_msg
 

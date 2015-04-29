@@ -1,3 +1,6 @@
+#! /usr/bin/python2
+# -*- coding: utf8 -*-
+
 import pykka
 import time
 import warnings
@@ -101,13 +104,13 @@ class Manager(pykka.ThreadingActor):
             out_msg = 0 # All went well
         # elif # some request to fech raw data from mongo:
         #    run same stuff ?
-        else:
-            try:
-                ## read data from mongoDB linked to this used
-                # + do the same treatment
-                # out_msg = 0
-            except
-                out_msg = 0xDEADFEED ## No data
+        # else:
+        #     try:
+        #         ## read data from mongoDB linked to this used
+        #         # + do the same treatment
+        #         # out_msg = 0
+        #     except:
+        #         out_msg = 0xDEADFEED ## No data
         return out_msg
 
     def learn(self, k=20):

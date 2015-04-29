@@ -1,3 +1,6 @@
+#! /usr/bin/python2
+# -*- coding: utf8 -*-
+
 import pykka
 import time
 import nltk as nl

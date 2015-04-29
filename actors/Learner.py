@@ -1,3 +1,6 @@
+#! /usr/bin/python2
+# -*- coding: utf8 -*-
+
 import pykka
 import time
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
@@ -5,11 +8,11 @@ from sklearn.pipeline import Pipeline
 from sklearn.cluster import SpectralClustering, AffinityPropagation
 
 class Learner(pykka.ThreadingActor):
-	"""Fetch friends and tweets for a given ego """
-	def __init__(self, k=20):
-		super(Learner, self).__init__()
+    """Fetch friends and tweets for a given ego """
+    def __init__(self, k=20):
+        super(Learner, self).__init__()
         self.token_processer = Pipeline([('vect', CountVectorizer()), \
-                                    ('tfidf', TfidfTransformer()) ])
+                                    ('tfidf', TfidfTransformer()) ])
         self.k = k # number of clusters
         self.clf = SpectralClustering(n_clusters=k, random_state=42, \
                             affinity='rbf', n_neighbors=15, eigen_tol=0.0)
@@ -31,4 +34,4 @@ class Learner(pykka.ThreadingActor):
         ## Fast loop:
         [ clustering[labels[i]].append(u_id) for i, u_id in enumerate(u_ids)]
 
-        return {'ego_id':data.ego_id, clustering}
+        return {'ego_id':data.ego_id, 'clustering':clustering}
