@@ -6,6 +6,7 @@ import time
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.cluster import SpectralClustering, AffinityPropagation
+from datetime import datetime
 
 class Learner(pykka.ThreadingActor):
     """Fetch friends and tweets for a given ego """
@@ -18,20 +19,18 @@ class Learner(pykka.ThreadingActor):
                             affinity='rbf', n_neighbors=15, eigen_tol=0.0)
 
     def learn(self, data):
-        {'ego_id':self.ego_id ,'u_id':u_id, \
-                                'u_document':" ".join(documents)}
         u_ids = []
         X = []
         def insert(elem):
             u_ids.append(elem['u_id'])
-            X.append(elem[u_document])
+            X.append(elem['u_document'])
         [insert(elem) for elem in data]
         # Create bag of words representation
-        X = token_processer.fit_transform(X)
+        X = self.token_processer.fit_transform(X)
         labels = self.clf.fit_predict(X)
 
-        clustering = [[] for i in range(k)]
+        clustering = [[] for i in range(self.k)]
         ## Fast loop:
         [ clustering[labels[i]].append(u_id) for i, u_id in enumerate(u_ids)]
-
-        return {'ego_id':data.ego_id, 'clustering':clustering}
+ 
+        return {'ego_id':data[0]['ego_id'], "nb_clusters":self.k, 'clustering':clustering, "created_at":str(datetime.now())}
