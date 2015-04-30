@@ -33,7 +33,7 @@ class Manager(pykka.ThreadingActor):
         # Get friends ids list
         friends_ids = []
         [friends_ids.extend(page) for page in \
-             tweepy.Cursor(api.friends_ids, id=self.ego.id).pages()]
+             tweepy.Cursor(api.friends_ids(), id=self.ego.id).pages()]
         self.friends_ids = set(friends_ids)
 
         if len(friends_ids) < self.ego.friends_count:

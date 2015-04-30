@@ -25,6 +25,7 @@ class Fetcher(pykka.ThreadingActor):
         processed = []
         try :
             for fid in ids:
+                ## Add exception to handle user with no tweets
                 bulk = self.api.user_timeline(id=fid, count=100)
                 data.append(self.data_filter(bulk))
                 processed.append(fid)
