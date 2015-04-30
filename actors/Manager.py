@@ -90,15 +90,15 @@ class Manager(pykka.ThreadingActor):
     def parse_data(self):
         if len(self.data) > 0:
             parsed_data = []
+            self.pool['tw_parsers'] = Tw_parser.start()
             for friend_data in self.data:
                 u_id = friend_data['u_id']
                 # Tweet parsing
-                self.pool['tw_parsers'] = Tw_parser.start()
                 # Non blocking:
                 parsed_tweets = self.pool['tw_parsers'].parse_tweets(friend_data['texts'], friend_data['texts_lang'])
 
                 # Url parsing
-                urls = friend_data['texts_urls']
+                urls = [url['expanded_url'] for elem in friend_data['texts_urls'] if len(elem) > 0 for url in elem ]
                 pool_size = len(self.pool['url_parsers'])
                 if pool_size < len(urls):
                     self.pool['url_parsers'].extend( \
@@ -111,7 +111,7 @@ class Manager(pykka.ThreadingActor):
                 # Gather parsed_data (blocking)
                 documents = [parsed_tweets.get()]
                 documents.extend([doc for doc in pykka.get_all(parsed_urls) if len(doc) > 0])
-                parsed_data.extend({'ego_id':self.ego_id ,'u_id':u_id, \
+                parsed_data.append({'ego_id':self.ego_id ,'u_id':u_id, \
                                 'u_document':" ".join(documents)})
 
             self.pool['tw_parsers'].stop()

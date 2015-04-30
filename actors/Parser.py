@@ -67,7 +67,7 @@ class Url_parser(Parser):
 
     def parse_url(self, url):
         try :
-            meta = self.get_meta(message['parse_url']['url'])
+            meta = self.get_meta(url)
             document = self.meta_parser(meta)
             out_msg = " ".join(document)
         except:
