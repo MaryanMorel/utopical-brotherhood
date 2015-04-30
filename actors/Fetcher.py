@@ -23,12 +23,18 @@ class Fetcher(pykka.ThreadingActor):
         """
         data = []
         processed = []
+        errors = []
         try :
             for fid in ids:
                 ## Add exception to handle user with no tweets
-                bulk = self.api.user_timeline(id=fid, count=100)
-                data.append(self.data_filter(bulk))
-                processed.append(fid)
+                try:
+                    bulk = self.api.user_timeline(id=fid, count=100)
+                    data.append(self.data_filter(bulk))
+                    processed.append(fid)
+                except IndexError:
+                    # drop friend id without tweet
+                    # except more general + stock error in errors list {fid, exception} ?
+                    errors.append(fid)
             out_msg = {'status':0, 'data':data, \
                        'unprocessed_friends':None}
         except tweepy.TweepError as exc:
@@ -36,7 +42,7 @@ class Fetcher(pykka.ThreadingActor):
             warn(exc)
             unprocessed_friends = set(ids).difference(set(processed))
             out_msg = {'status':0xDEADFEED, 'data':data, \
-                       'unprocessed_friends':unprocessed_friends}
+                       'unprocessed_friends':unprocessed_friends, 'errors':errors}
         return out_msg
 
     def data_filter(self, bulk):

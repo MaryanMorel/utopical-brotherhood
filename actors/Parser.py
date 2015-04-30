@@ -40,11 +40,11 @@ class Tw_parser(Parser):
     def __init__(self):
         super(Tw_parser, self).__init__()
 
-    def parse_tweets(self, uid, texts, texts_lang):
+    def parse_tweets(self, texts, texts_lang):
         """ Assume message is a tweet collection """
         document = []
         [document.extend(self.text_parser(txt, lang)) for txt, lang in zip(texts, texts_lang)]
-        out_msg = {"uid":uid, "document":" ".join(document)}
+        out_msg = " ".join(document)
         return out_msg
 
     def text_parser(self, text, lang):
