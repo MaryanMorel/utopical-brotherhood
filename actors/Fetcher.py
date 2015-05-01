@@ -36,10 +36,9 @@ class Fetcher(pykka.ThreadingActor):
                     # except more general + stock error in errors list {fid, exception} ?
                     errors.append(fid)
             out_msg = {'status':0, 'data':data, \
-                       'unprocessed_friends':None}
+                       'unprocessed_friends':None, 'errors':errors}
         except tweepy.TweepError as exc:
             warn('0xDEADFEED')
-            warn(exc)
             unprocessed_friends = set(ids).difference(set(processed))
             out_msg = {'status':0xDEADFEED, 'data':data, \
                        'unprocessed_friends':unprocessed_friends, 'errors':errors}
