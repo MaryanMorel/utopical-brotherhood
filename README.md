@@ -30,7 +30,9 @@ The server needs the following informations contained in a file stored in ../ :
 run Server.py
 
 #### API : 
-`start_manager(self, user_token)`: create a manager actor that supervise the data collection, cleaning and learning, and execute it. Erase previous results from the database (no history). Returns manager_id, the id of the manager.
+`start_manager(self, user_token)`: create a manager actor that supervise the data collection, cleaning and learning.
+
+`start_manager_and_run(self, user_token)`: start a manager, and execute it (i.e. fetch and parse data, learn with nb_clusters=20). Erase previous results from the database (no history). Returns manager_id, the id of the manager.
 
 `learn(self, manager_id, nb_clusters)`: performs a learning for a specified number of clusters, store the results in the DB.
 
@@ -47,6 +49,10 @@ run Server.py
 #### Examples :
 Using command line interface (note the use of single quotes / double quotes in this precise order):
 `$zerorpc tcp://[ip_of_the_server]:[port] start_manager '{"key":"[twitter_access_token_key]", "secret":"[twitter__access_token_secret]"}'`
+
+`zerorpc tcp://127.0.0.1:14242 start_manager_and_run '{"key":"[twitter_access_token_key]", "secret":"[twitter__access_token_secret]"}'`
+
+`zerorpc tcp://127.0.0.1:14242 learn 0_10` : learn 10 clusters for user corresponding to manager 0
 
 Using python / node.js : cf. [zerorpc documentation](https://zerorpc.dotcloud.com/)
 
