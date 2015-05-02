@@ -50,9 +50,7 @@ class Manager(pykka.ThreadingActor):
             answer = self.pool['fetcher'].fetch_data(self.remaining_friends)
             answer_data = answer.get()
             self.process_fetcher_answer(answer_data)
-        out_msg = 0
         self.pool['fetcher'].stop()
-        return out_msg
 
     def process_fetcher_answer(self, answer):
         if answer['errors']:
@@ -64,7 +62,6 @@ class Manager(pykka.ThreadingActor):
         if answer['data']:
             self.db['raw_data'].insert_many(answer['data'])
             self.data.extend(answer['data'])
-        return None
 
     def parse_data(self):
         if len(self.data) == 0:
@@ -97,8 +94,6 @@ class Manager(pykka.ThreadingActor):
 
         self.pool['tw_parsers'].stop()
         [worker.stop() for worker in self.pool['url_parsers']]
-        out_msg = 0 # All went well
-        return out_msg
 
     def learn(self, k=20):
         ## Fetch data from DB
@@ -109,7 +104,20 @@ class Manager(pykka.ThreadingActor):
         ## Push into DB
         self.db['clusterings'].insert(clustering)
         self.pool['learner'].stop()
-        return 0
+
+    def runAll(self):
+        self.fetch_data()
+        self.parse_data()
+        self.learn()
+
+    def erase_raw_data(self):
+        self.db['raw_data'].remove({'ego_id':self.ego.id}) # {"date": {"$gt": "2012-12-15"}}
+
+    def erase_parsed_data(self):
+        self.db['parsed_data'].remove({'ego_id':self.ego.id}) # {"date": {"$gt": "2012-12-15"}}
+
+    def erase_clusterings(self):
+        self.db['clusterings'].remove({'ego_id':self.ego.id}) # {"date": {"$gt": "2012-12-15"}}
 
     def stop_slaves(self):
         if self.pool['fetcher']:

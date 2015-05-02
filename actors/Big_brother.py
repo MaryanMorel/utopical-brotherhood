@@ -12,10 +12,24 @@ class Big_Brother(pykka.ThreadingActor):
 
     def start_manager(self, token):
         self.pool['managers'].append(Manager.start(token).proxy())
-        return 0
+        return len(self.pool['managers']) #id of the manager
 
-    def stop_manager(self, token):
-        answer = self.pool['managers'][w].stop_slaves()
+    def run_manager(self, manager_id):
+        self.pool['managers'][manager_id].runAll()
+
+    def learn(self, manager_id, k):
+        self.pool['managers'][manager_id].learn(k)
+
+    def erase_manager_raw_data(self, manager_id):
+        self.pool['managers'][manager_id].erase_raw_data()
+
+    def erase_manager_parsed_data(self, manager_id):
+        self.pool['managers'][manager_id].erase_parsed_data()
+
+    def erase_manager_clusterings(self, manager_id):
+        self.pool['managers'][manager_id].erase_clusterings()
+
+    def stop_manager(self, manager_id):
+        answer = self.pool['managers'][manager_id].stop_slaves()
         answer.get() # block thread
-        self.pool['managers'][w].stop()
-        return 0
+        self.pool['managers'][manager_id].stop()
