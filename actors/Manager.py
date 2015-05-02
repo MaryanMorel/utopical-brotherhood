@@ -74,6 +74,7 @@ class Manager(pykka.ThreadingActor):
         self.pool['tw_parsers'] = Tw_parser.start().proxy()
         for friend_data in self.data:
             u_id = friend_data['u_id']
+            u_screen_name = friend_data['u_screen_name']
             # Tweet parsing, Non blocking:
             parsed_tweets = self.pool['tw_parsers'].parse_tweets(friend_data['texts'], friend_data['texts_lang'])
 
@@ -91,7 +92,8 @@ class Manager(pykka.ThreadingActor):
             # Gather parsed_data (blocking)
             documents = [parsed_tweets.get()]
             documents.extend([doc for doc in pykka.get_all(parsed_urls) if len(doc) > 0])
-            self.db['parsed_data'].insert({'ego_id':self.ego.id ,'u_id':u_id, 'u_document':" ".join(documents)})
+            self.db['parsed_data'].insert({'ego_id':self.ego.id ,'u_id':u_id, \
+                'u_screen_name':u_screen_name, 'u_document':" ".join(documents)})
 
         self.pool['tw_parsers'].stop()
         [worker.stop() for worker in self.pool['url_parsers']]

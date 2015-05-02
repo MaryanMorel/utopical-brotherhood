@@ -19,10 +19,12 @@ class Learner(pykka.ThreadingActor):
                             affinity='rbf', n_neighbors=15, eigen_tol=0.0)
 
     def learn(self, data):
-        u_ids = []
+        # u_ids = []
+        u_screen_names = []
         X = []
         def insert(elem):
-            u_ids.append(elem['u_id'])
+            # u_ids.append(elem['u_id'])
+            u_screen_names.append(elem['u_screen_name'])
             X.append(elem['u_document'])
         [insert(elem) for elem in data]
         # Create bag of words representation
@@ -31,6 +33,7 @@ class Learner(pykka.ThreadingActor):
 
         clustering = [[] for i in range(self.k)]
         ## Fast loop:
-        [ clustering[labels[i]].append(u_id) for i, u_id in enumerate(u_ids)]
+        # [ clustering[labels[i]].append(u_id) for i, u_id in enumerate(u_ids) ]
+        [ clustering[labels[i]].append(u_scr_n) for i, u_scr_n in enumerate(u_screen_names) ]
  
         return {'ego_id':data[0]['ego_id'], "nb_clusters":self.k, 'clustering':clustering, "created_at":str(datetime.now())}
