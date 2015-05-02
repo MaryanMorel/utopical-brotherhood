@@ -4,6 +4,7 @@
 import zerorpc
 from actors import Manager
 import simplejson as json
+import time
 
 class Master(object):
     ## Simple server-server communication interface
@@ -14,8 +15,9 @@ class Master(object):
         self.pool = {'managers':[]}
 
     def start_manager(self, user_token):
-        DUMP THE JSON (TOKENS)
+        user_token = json.loads(user_token)
         self.pool['managers'].append(Manager.start(self.app_token, user_token, self.mongodbconnection).proxy())
+        manager_id = len(self.pool['managers']) - 1
         ## Now update strategy for now, erase old data (blocking):
         ansr = self.pool['managers'][manager_id].erase_raw_data()
         ansr.get()
@@ -25,7 +27,7 @@ class Master(object):
         ansr.get
         ## Run data extraction, parsing, and learning (non blocking)
         self.pool['managers'][manager_id].runAll()
-        return len(self.pool['managers']) #id of the manager
+        return manager_id #id of the manager
 
     ## Methods for fine control :
     def learn(self, manager_id, nb_clusters):
@@ -48,14 +50,15 @@ class Master(object):
 
     def sleep_and_wake(self, sleep_time):
         ##  method sleep user send nb sec for testing purpose
+        time.sleep(float(sleep_time))
         return "Thanks for the nap, dude !"
 
 if __name__ == '__main__':
     ## Read token
-    with open("./dummy_user.settings", "r") as infile:    
+    with open("../utopical.settings", "r") as infile:    
         settings = json.load(infile)
-    app_token = {'key':settings['twitter']["consumer_key"], 'secret':settings['twitter']["consumer_secret"]}
-    mongodbconnection = {'host':settings['mongo']['mongodbconnection']['host']}
+    app_token = {'key':settings['twitter']["app_key"], 'secret':settings['twitter']["app_secret"]}
+    mongodbconnection = {'host':settings['mongodb']['host']}
     ## Configure server
     server = zerorpc.Server(Master(app_token, mongodbconnection)) ## Expose manager interface
     server.bind("tcp://0.0.0.0:4242") # Listen all ips on port 4242 for tcp connections
